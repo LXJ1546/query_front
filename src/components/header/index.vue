@@ -47,7 +47,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin-right: 5px;
+    margin-right: 9px;
     line-height: 20px;
     p {
       font-size: 14px;

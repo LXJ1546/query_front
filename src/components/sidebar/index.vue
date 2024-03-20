@@ -28,6 +28,7 @@
 <style lang="scss" scoped>
 .sidebar {
   width: $base-sidebar-width;
+  height:400px;
   display: flex;
   flex-direction: column;
   align-items: center;
