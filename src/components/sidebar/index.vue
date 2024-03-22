@@ -28,7 +28,7 @@
 <style lang="scss" scoped>
 .sidebar {
   width: $base-sidebar-width;
-  height:400px;
+  height: $base-sidebar-height;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -37,9 +37,10 @@
   border-right-style: solid;
   border-right-width: 1px;
   border-right-color: rgb(183, 183, 186);
-  border-bottom-left-radius: 12px;
+  border-bottom: 1px solid rgb(183, 183, 186);
+  border-bottom-right-radius: 12px;
   .card {
-    width:230px;
+    width: 230px;
     color: rgb(121, 174, 243);
     line-height: 24px;
   }

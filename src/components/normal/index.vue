@@ -8,7 +8,7 @@
         <div>
           <span>性别：</span>
           <el-select
-            v-model="value"
+            v-model="gender"
             placeholder="Select"
             size="large"
             style="width: 212px"
@@ -22,9 +22,9 @@
           </el-select>
         </div>
         <div>
-          <span>省份：</span>
+          <span>地区：</span>
           <el-select
-            v-model="value"
+            v-model="region"
             placeholder="Select"
             size="large"
             style="width: 212px"
@@ -42,7 +42,7 @@
         <div>
           <span>教育水平：</span>
           <el-select
-            v-model="value"
+            v-model="edlevel"
             placeholder="Select"
             size="large"
             style="width: 180px"
@@ -58,7 +58,7 @@
         <div>
           <span>结婚状态：</span>
           <el-select
-            v-model="value"
+            v-model="mastatus"
             placeholder="Select"
             size="large"
             style="width: 180px"
@@ -72,7 +72,7 @@
           </el-select>
         </div>
       </div>
-      <el-button size="large" class="btn">查询</el-button>
+      <el-button size="large" class="btn" @click="handleQuery">查询</el-button>
     </div>
     <div class="midselect">
       <div class="title">
@@ -80,33 +80,29 @@
       </div>
       <div class="inputsearch">
         <el-input
-          v-model="input"
+          v-model="blur"
           style="width: 240px"
           size="large"
           placeholder="Please input"
         />
-        <el-button size="large" class="btn">查询</el-button>
+        <el-button size="large" class="btn" @click="handleBlur">查询</el-button>
       </div>
-    </div>
-    <div class="table_container">
-      <el-table
-        :data="tableData"
-        style="width: 100%"
-        :row-class-name="tableRowClassName"
-      >
-        <el-table-column prop="date" label="Date" width="180" />
-        <el-table-column prop="name" label="Name" width="180" />
-        <el-table-column prop="address" label="Address" />
-      </el-table>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from "vue";
-
-const value = ref("");
-
+import axios from "axios";
+import useQueryStore from "../../store/query";
+const gender = ref("");
+const region = ref("");
+const edlevel = ref("");
+const mastatus = ref("");
+const blur = ref("");
+let sql = "SELECT * FROM customer_info_100 WHERE 1 = 1";
+let blursql = "";
+console.log(sql);
 const options1 = ["男", "女"];
 const options2 = [
   "北京市",
@@ -146,37 +142,51 @@ const options2 = [
 ];
 const options3 = ["高中", "本科", "硕士", "博士"];
 const options4 = ["单身", "已婚", "离异"];
-const tableRowClassName = ({ rowIndex }) => {
-  if (rowIndex === 1) {
-    return "warning-row";
-  } else if (rowIndex === 3) {
-    return "success-row";
+const queryStore = useQueryStore();
+const handleQuery = () => {
+  sql = "SELECT * FROM customer_info_100 WHERE 1 = 1";
+  if (gender.value !== "") {
+    sql += ` AND Gender = '${gender.value}'`;
   }
-  return "";
-};
 
-const tableData = [
-  {
-    date: "2016-05-03",
-    name: "Tom",
-    address: "No. 189, Grove St, Los Angeles",
-  },
-  {
-    date: "2016-05-02",
-    name: "Tom",
-    address: "No. 189, Grove St, Los Angeles",
-  },
-  {
-    date: "2016-05-04",
-    name: "Tom",
-    address: "No. 189, Grove St, Los Angeles",
-  },
-  {
-    date: "2016-05-01",
-    name: "Tom",
-    address: "No. 189, Grove St, Los Angeles",
-  },
-];
+  if (region.value !== "") {
+    sql += ` AND Region = '${region.value}'`;
+  }
+
+  if (edlevel.value !== "") {
+    sql += ` AND Education_Level = '${edlevel.value}'`;
+  }
+
+  if (mastatus.value !== "") {
+    sql += ` AND Marital_Status = '${mastatus.value}'`;
+  }
+  axios
+    .post("http://localhost:5000/", { sql: sql })
+    .then((response) => {
+      queryStore.table = response.data;
+    })
+    .catch((error) => {
+      console.error("There was an error!", error);
+    });
+};
+const handleBlur = () => {
+  blursql = "SELECT * FROM customer_info_100 WHERE";
+  if (blur.value !== "") {
+    blursql += ` Gender LIKE '%${blur.value}%' OR Name LIKE '%${blur.value}%' 
+    OR Age LIKE '%${blur.value}%' OR Income LIKE '%${blur.value}%' OR Region LIKE '%${blur.value}%' 
+    OR Contact_Information LIKE '%${blur.value}%' OR Occupation LIKE '%${blur.value}%' OR Education_Level LIKE '%${blur.value}%' 
+    OR Marital_Status LIKE '%${blur.value}%' OR Number_of_Household_Members LIKE '%${blur.value}%' OR Interests_and_Hobbies LIKE '%${blur.value}%' 
+    OR Customer_Loyalty LIKE '%${blur.value}%'`;
+  }
+  axios
+    .post("http://localhost:5000/", { sql: blursql })
+    .then((response) => {
+      queryStore.table = response.data;
+    })
+    .catch((error) => {
+      console.error("There was an error!", error);
+    });
+};
 </script>
 
 <style lang="scss" scoped>
@@ -229,7 +239,7 @@ const tableData = [
       }
     }
     .inputsearch {
-      margin-bottom: 8px;
+      margin-bottom: 25px;
       margin-left: 10px;
       .btn {
         border: 1px solid rgb(229, 225, 225);
@@ -240,11 +250,5 @@ const tableData = [
       }
     }
   }
-}
-::v-deep.el-table .warning-row {
-  --el-table-tr-bg-color: var(--el-color-warning-light-9);
-}
-::v-deep.el-table .success-row {
-  --el-table-tr-bg-color: var(--el-color-success-light-9);
 }
 </style>

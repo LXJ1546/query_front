@@ -2,7 +2,7 @@
   <div class="content">
     <div class="container">
       <el-menu default-active="1" mode="horizontal" class="menu">
-        <el-menu-item index="1" @click="chooseQuery1">常规查询</el-menu-item>
+        <el-menu-item index="1" @click="chooseQuery1" style="border-top-left-radius: 8px;">常规查询</el-menu-item>
         <el-menu-item index="2" @click="chooseQuery2">高级查询</el-menu-item>
       </el-menu>
       <Normal v-if="normal" />
@@ -30,11 +30,12 @@ const chooseQuery2 = () => {
 <style lang="scss" scoped>
 .content {
   width: calc(100% - $base-sidebar-width);
-  height: 100%;
   left: $base-sidebar-width;
   top: $base-header-width;
   border-radius: 8px;
-  padding: 8px;
+  padding-top: 8px;
+  padding-left: 8px;
+  padding-right:8px;
   overflow: auto;
   .container {
     border-radius: 8px;
