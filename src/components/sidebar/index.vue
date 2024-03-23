@@ -17,6 +17,7 @@
       <p>构建工具Vite</p>
       <p>前端框架Vue</p>
       <p>UI框架Elements-plus</p>
+      <p>状态管理Pinia</p>
       <p>后端语言Python</p>
       <p>后端框架Flask</p>
     </el-card>

@@ -53,8 +53,12 @@
       </div>
       <div class="volume">
         <span>语音输入条件:</span>
-        <el-button size="large" class="btn" @click="handleVolume"
-          >开始识别</el-button
+        <el-button
+          size="large"
+          class="btn"
+          @click="handleVolume"
+          :loading="isRecognizing"
+          >{{ isRecognizing ? "识别中" : "开始识别" }}</el-button
         >
       </div>
       <el-input
@@ -62,23 +66,29 @@
         style="width: 600px"
         :rows="5"
         type="textarea"
-        placeholder="文本展示区域"
+        placeholder="语音输入格式：我要查询（字段）[为、大于、小于、等于、大于等于、小于等于]（值）的顾客，多重条件使用“和”连接，例如“我要查询性别为男和教育水平为硕士的顾客”"
         class="show"
       />
-      <el-button size="large" class="btn1">开始查询</el-button>
+      <el-button size="large" class="btn1" @click="handleAdvancedQuery"
+        >开始查询</el-button
+      >
     </div>
   </div>
 </template>
 
 <script setup>
 import { ElMessage } from "element-plus";
+import axios from "axios";
+import useQueryStore from "../../store/query";
 import { ref } from "vue";
 const column = ref("");
 const compare = ref("");
 const givedata = ref("");
 const logic = ref("");
 const textarea = ref("");
+const isRecognizing = ref(false);
 let recognition = null;
+let sqlparse = "";
 const options1 = [
   "姓名",
   "性别",
@@ -105,6 +115,7 @@ const options2 = [
   "not in",
 ];
 const options3 = ["and", "or"];
+const queryStore = useQueryStore();
 const handleVolume = () => {
   // 检查浏览器是否支持Web Speech API
   if (!("webkitSpeechRecognition" in window)) {
@@ -114,16 +125,24 @@ const handleVolume = () => {
     recognition.lang = "zh-CN"; // 设置语言为中文
     recognition.interimResults = false; // 设置只返回最终结果
     recognition.onstart = () => {
-      ElMessage("开始识别，请说话...");
+      ElMessage({
+        message: "开始识别，请说话...",
+        type: "warning",
+      });
+      isRecognizing.value = true;
     };
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-      textarea.value = `语音识别结果: ${transcript}`;
+      isRecognizing.value = false;
+      sqlparse = parseQueryToSql(transcript);
+      textarea.value = `语音识别结果: ${transcript}\n解析查询语句: ${sqlparse}`;
     };
     recognition.onerror = function (event) {
+      isRecognizing.value = false;
       alert(`语音识别错误: ${event.error}`);
     };
     recognition.onend = () => {
+      isRecognizing.value = false;
       ElMessage({
         message: "识别成功！",
         type: "success",
@@ -135,7 +154,7 @@ const handleVolume = () => {
 
 const parseQueryToSql = (queryText) => {
   // 去除固定词语
-  queryText = queryText.replace("我要查询", "").replace("的顾客", "");
+  queryText = queryText.replace("我要查询", "").replace("的顾客。", "");
 
   // 解析条件
   const conditions = [];
@@ -152,50 +171,82 @@ const parseQueryToSql = (queryText) => {
   };
 
   const tokens = queryText.split("和");
-  for (const token in tokens) {
+  for (const token of tokens) {
     // 解析条件
     for (const field in fields) {
       if (token.includes(field)) {
         let operator = "";
         let value = "";
-        if (token.includes("小于")) {
+        if (token.includes("小于") && !token.includes("等于")) {
           operator = "<";
           value = token.split("小于")[1];
-        } else if (token.includes("大于")) {
+        } else if (token.includes("大于") && !token.includes("等于")) {
           operator = ">";
           value = token.split("大于")[1];
-        } else if (token.includes("等于")) {
+        } else if (
+          token.includes("等于") &&
+          !token.includes("小于") &&
+          !token.includes("大于")
+        ) {
           operator = "=";
           value = token.split("等于")[1];
+        } else if (token.includes("大于等于")) {
+          operator = ">=";
+          value = token.split("大于等于")[1];
+        } else if (token.includes("小于等于")) {
+          operator = "<=";
+          value = token.split("小于等于")[1];
         }
         // 处理数值类型的字段
         const column = fields[field];
         let condition = "";
         if (
-          ["Age", "Income", "Number_of_Household_Members", "Customer_Loyalty"].includes(column)
+          [
+            "Age",
+            "Income",
+            "Number_of_Household_Members",
+            "Customer_Loyalty",
+          ].includes(column)
         ) {
-          value=parseInt(value)
-          condition = `${column} ${operator} ${value}`;
+          if (operator != "" && value != "") {
+            value = parseInt(value);
+            condition = `${column} ${operator} ${value}`;
+          }
         } else {
           value = token.split("为")[1];
           // 处理非数值类型的字段
-          condition = `${column} = '${value}'`;
+          if (value != "" && value != undefined) {
+            condition = `${column} = '${value}'`;
+          }
         }
-        conditions.push(condition);
+        if (condition != "") {
+          conditions.push(condition);
+        }
       }
     }
   }
-
   // 构建SQL查询语句
   let sqlQuery = "";
   if (conditions.length > 0) {
-    sqlQuery = "SELECT * FROM customers WHERE " + conditions.join(" AND ");
+    sqlQuery =
+      "SELECT * FROM customer_info_100 WHERE " + conditions.join(" AND ");
   } else {
     // 如果没有条件，默认查询所有顾客信息
-    sqlQuery = "SELECT * FROM customers";
+    sqlQuery = "语音输入格式不正确，请重新输入！";
   }
 
   return sqlQuery;
+};
+
+const handleAdvancedQuery = () => {
+  axios
+    .post("http://localhost:5000/", { sql: sqlparse })
+    .then((response) => {
+      queryStore.table = response.data;
+    })
+    .catch((error) => {
+      console.error("There was an error!", error);
+    });
 };
 </script>
 

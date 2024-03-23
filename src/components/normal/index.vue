@@ -102,7 +102,6 @@ const mastatus = ref("");
 const blur = ref("");
 let sql = "SELECT * FROM customer_info_100 WHERE 1 = 1";
 let blursql = "";
-console.log(sql);
 const options1 = ["男", "女"];
 const options2 = [
   "北京市",
@@ -170,6 +169,10 @@ const handleQuery = () => {
     });
 };
 const handleBlur = () => {
+  gender.value = "";
+  region.value = "";
+  edlevel.value = "";
+  mastatus.value = "";
   blursql = "SELECT * FROM customer_info_100 WHERE";
   if (blur.value !== "") {
     blursql += ` Gender LIKE '%${blur.value}%' OR Name LIKE '%${blur.value}%' 
