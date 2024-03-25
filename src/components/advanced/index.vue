@@ -10,9 +10,10 @@
           placeholder="选择字段"
           size="large"
           style="width: 150px"
+          @change="setQueryField"
         >
           <el-option
-            v-for="item in options1"
+            v-for="item in Object.keys(option)"
             :key="item"
             :label="item"
             :value="item"
@@ -23,6 +24,7 @@
           placeholder="选择运算符"
           size="large"
           style="width: 150px"
+          @change="inputChange"
         >
           <el-option
             v-for="item in options2"
@@ -36,12 +38,14 @@
           style="width: 180px"
           size="large"
           placeholder="输入数据"
+          @change="inputChange"
         />
         <el-select
           v-model="logic"
           placeholder="选择多重条件"
           size="large"
           style="width: 150px"
+          @change="logicInputChange"
         >
           <el-option
             v-for="item in options3"
@@ -80,7 +84,7 @@
 import { ElMessage } from "element-plus";
 import axios from "axios";
 import useQueryStore from "../../store/query";
-import { ref } from "vue";
+import { ref, reactive } from "vue";
 const column = ref("");
 const compare = ref("");
 const givedata = ref("");
@@ -101,7 +105,7 @@ const options1 = [
   "家庭人数",
   "顾客忠诚度",
 ];
-const options2 = [
+const options2 = ref([
   "=",
   "<",
   "<=",
@@ -113,9 +117,21 @@ const options2 = [
   "is null",
   "in",
   "not in",
-];
+]);
 const options3 = ["and", "or"];
 const queryStore = useQueryStore();
+
+const option = reactive({
+  姓名: ["like", "not like"],
+  性别: ["="],
+  收入: ["<", "<=", ">", ">="],
+  地区: ["=", "like"],
+  职业: ["=", "like"],
+  教育水平: ["="],
+  婚姻状态: ["="],
+  家庭人数: ["=", "<", "<=", ">", ">="],
+  顾客忠诚度: ["="],
+});
 const handleVolume = () => {
   // 检查浏览器是否支持Web Speech API
   if (!("webkitSpeechRecognition" in window)) {
@@ -228,8 +244,9 @@ const parseQueryToSql = (queryText) => {
   // 构建SQL查询语句
   let sqlQuery = "";
   if (conditions.length > 0) {
-    sqlQuery =
-      "SELECT * FROM customer_info_100 WHERE " + conditions.join(" AND ");
+    // sqlQuery =
+    //   "SELECT * FROM customer_info_100 WHERE " + conditions.join(" AND ");
+    sqlQuery = conditions.join(" AND ");
   } else {
     // 如果没有条件，默认查询所有顾客信息
     sqlQuery = "语音输入格式不正确，请重新输入！";
@@ -239,8 +256,11 @@ const parseQueryToSql = (queryText) => {
 };
 
 const handleAdvancedQuery = () => {
+  console.log("查询", sqlparse);
   axios
-    .post("http://localhost:5000/", { sql: sqlparse })
+    .post("http://localhost:5000/", {
+      sql: "SELECT * FROM customer_info_100 WHERE " + sqlparse,
+    })
     .then((response) => {
       queryStore.table = response.data;
     })
@@ -248,6 +268,79 @@ const handleAdvancedQuery = () => {
       console.error("There was an error!", error);
     });
 };
+
+function inputChange(value) {
+  textarea.value = textarea.value + " " + value;
+  setStrSQL(value);
+}
+
+function setQueryField(value) {
+  inputChange(value);
+  options2.value = option[value];
+  delete option[value];
+}
+
+function logicInputChange(value) {
+  textarea.value = textarea.value + " " + value;
+  column.value = "";
+  compare.value = "";
+  givedata.value = "";
+  setStrSQL(value);
+}
+
+function setStrSQL(value) {
+  switch (value) {
+    case "姓名":
+      sqlparse = sqlparse + "Name ";
+      break;
+    case "性别":
+      sqlparse = sqlparse + "Gender ";
+      break;
+    case "收入":
+      sqlparse = sqlparse + "Income ";
+      break;
+    case "地区":
+      sqlparse = sqlparse + "Region ";
+      break;
+    case "职业":
+      sqlparse = sqlparse + "Occupation ";
+      break;
+    case "教育水平":
+      sqlparse = sqlparse + "Education_Level ";
+      break;
+    case "婚姻状态":
+      sqlparse = sqlparse + "Marital_Status ";
+      break;
+    case "家庭人数":
+      sqlparse = sqlparse + "Number_of_Household_Members ";
+      break;
+    case "顾客忠诚度":
+      sqlparse = sqlparse + "Customer_Loyalty ";
+      break;
+    case "=":
+    case "<":
+    case "<=":
+    case ">":
+    case ">=":
+    case "!=":
+    case "like":
+    case "not like":
+    case "is null":
+    case "in":
+    case "not in":
+      console.log(value);
+      sqlparse = sqlparse + value + " ";
+      break;
+    case "and":
+    case "or":
+      sqlparse = sqlparse + " " + value + " ";
+      break;
+    default:
+      let str = /^\d+$/.test(value) ? value : `'` + value + `'`;
+      sqlparse = sqlparse + str;
+      break;
+  }
+}
 </script>
 
 <style lang="scss" scoped>
