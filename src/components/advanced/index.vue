@@ -276,6 +276,7 @@ const handleAdvancedQuery = () => {
       console.error("There was an error!", error);
     });
   disable.value = false;
+  logic.value = "";
   sqlparse = "";
 };
 
