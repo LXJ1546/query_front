@@ -11,6 +11,7 @@
           size="large"
           style="width: 150px"
           @change="setQueryField"
+          :disabled="disable"
         >
           <el-option
             v-for="item in Object.keys(option)"
@@ -24,7 +25,7 @@
           placeholder="选择运算符"
           size="large"
           style="width: 150px"
-          @change="inputChange"
+          :disabled="disable"
         >
           <el-option
             v-for="item in options2"
@@ -38,7 +39,7 @@
           style="width: 180px"
           size="large"
           placeholder="输入数据"
-          @change="inputChange"
+          :disabled="disable"
         />
         <el-select
           v-model="logic"
@@ -46,6 +47,7 @@
           size="large"
           style="width: 150px"
           @change="logicInputChange"
+          :disabled="disable"
         >
           <el-option
             v-for="item in options3"
@@ -81,7 +83,7 @@
 </template>
 
 <script setup>
-import { ElMessage } from "element-plus";
+import { ElMessage, ElNotification } from "element-plus";
 import axios from "axios";
 import useQueryStore from "../../store/query";
 import { ref, reactive } from "vue";
@@ -91,20 +93,11 @@ const givedata = ref("");
 const logic = ref("");
 const textarea = ref("");
 const isRecognizing = ref(false);
+const disable = ref(false);
+let isVolume = false;
 let recognition = null;
 let sqlparse = "";
-const options1 = [
-  "姓名",
-  "性别",
-  "收入",
-  "地区",
-  "邮箱",
-  "职业",
-  "教育水平",
-  "婚姻状态",
-  "家庭人数",
-  "顾客忠诚度",
-];
+
 const options2 = ref([
   "=",
   "<",
@@ -118,19 +111,20 @@ const options2 = ref([
   "in",
   "not in",
 ]);
-const options3 = ["and", "or"];
+const options3 = ["and", "or", "无"];
 const queryStore = useQueryStore();
 
 const option = reactive({
   姓名: ["like", "not like"],
   性别: ["="],
-  收入: ["<", "<=", ">", ">="],
+  年龄: ["=", "<", "<=", ">", ">="],
+  收入: ["=", "<", "<=", ">", ">="],
   地区: ["=", "like"],
   职业: ["=", "like"],
   教育水平: ["="],
   婚姻状态: ["="],
   家庭人数: ["=", "<", "<=", ">", ">="],
-  顾客忠诚度: ["="],
+  顾客忠诚度: ["=", "<", "<=", ">", ">="],
 });
 const handleVolume = () => {
   // 检查浏览器是否支持Web Speech API
@@ -244,8 +238,8 @@ const parseQueryToSql = (queryText) => {
   // 构建SQL查询语句
   let sqlQuery = "";
   if (conditions.length > 0) {
-    // sqlQuery =
-    //   "SELECT * FROM customer_info_100 WHERE " + conditions.join(" AND ");
+    sqlQuery =
+      "SELECT * FROM customer_info_100 WHERE " + conditions.join(" AND ");
     sqlQuery = conditions.join(" AND ");
   } else {
     // 如果没有条件，默认查询所有顾客信息
@@ -256,6 +250,20 @@ const parseQueryToSql = (queryText) => {
 };
 
 const handleAdvancedQuery = () => {
+  if (
+    !isVolume &&
+    (column.value == "" ||
+      compare.value == "" ||
+      givedata.value == "" ||
+      logic.value == "")
+  ) {
+    ElNotification({
+      title: "Error",
+      message: "查询条件不完整！",
+      type: "error",
+    });
+    return;
+  }
   console.log("查询", sqlparse);
   axios
     .post("http://localhost:5000/", {
@@ -267,25 +275,28 @@ const handleAdvancedQuery = () => {
     .catch((error) => {
       console.error("There was an error!", error);
     });
+  disable.value = false;
+  sqlparse = "";
 };
 
-function inputChange(value) {
-  textarea.value = textarea.value + " " + value;
-  setStrSQL(value);
-}
-
 function setQueryField(value) {
-  inputChange(value);
   options2.value = option[value];
-  delete option[value];
 }
 
 function logicInputChange(value) {
-  textarea.value = textarea.value + " " + value;
-  column.value = "";
-  compare.value = "";
-  givedata.value = "";
-  setStrSQL(value);
+  setStrSQL(column.value);
+  setStrSQL(compare.value);
+  setStrSQL(givedata.value);
+  if (value == "无") {
+    disable.value = true;
+  } else {
+    disable.value = false;
+    column.value = "";
+    compare.value = "";
+    givedata.value = "";
+    setStrSQL(value);
+  }
+  textarea.value = `查询语句: SELECT * FROM customer_info_100 WHERE ${sqlparse}`;
 }
 
 function setStrSQL(value) {
@@ -295,6 +306,9 @@ function setStrSQL(value) {
       break;
     case "性别":
       sqlparse = sqlparse + "Gender ";
+      break;
+    case "年龄":
+      sqlparse = sqlparse + "Age ";
       break;
     case "收入":
       sqlparse = sqlparse + "Income ";
@@ -328,7 +342,6 @@ function setStrSQL(value) {
     case "is null":
     case "in":
     case "not in":
-      console.log(value);
       sqlparse = sqlparse + value + " ";
       break;
     case "and":
