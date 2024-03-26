@@ -127,6 +127,7 @@ const option = reactive({
   顾客忠诚度: ["=", "<", "<=", ">", ">="],
 });
 const handleVolume = () => {
+  isVolume = true;
   // 检查浏览器是否支持Web Speech API
   if (!("webkitSpeechRecognition" in window)) {
     alert("您的浏览器不支持语音识别功能，请使用Chrome或其他支持的浏览器。");
@@ -277,6 +278,7 @@ const handleAdvancedQuery = () => {
     });
   disable.value = false;
   logic.value = "";
+  isVolume = false;
   sqlparse = "";
 };
 
@@ -297,6 +299,7 @@ function logicInputChange(value) {
     givedata.value = "";
     setStrSQL(value);
   }
+  console.log(sqlparse);
   textarea.value = `查询语句: SELECT * FROM customer_info_100 WHERE ${sqlparse}`;
 }
 
